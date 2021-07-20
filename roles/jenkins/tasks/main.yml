@@ -1,0 +1,63 @@
+---
+- name: install wget
+  yum:
+    name: wget
+    state: present
+
+- name: install git
+  yum:
+    name: git
+    state: present
+
+- name: install openjdk
+  yum:
+    name: java-1.8.0-openjdk.aarch64
+    state: present
+
+- name: download jenkins.repo
+  get_url:
+    url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+    dest: /etc/yum.repos.d/jenkins.repo
+
+- name: import jenkins key
+  rpm_key:
+    state: present
+    key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+
+- name: install jenkins
+  yum:
+    name: jenkins
+    state: present
+
+- name: Enable 8080 port
+  ansible.posix.firewalld:
+    port: 8080/tcp
+    permanent: yes
+    zone: public
+    state: enabled
+
+- name: realoding firewalld
+  shell: firewall-cmd --reload
+
+- name: start jenkins
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    name: jenkins
+
+- name: enable jenkins
+  systemd:
+    name: jenkins
+    enabled: true
+- name: Pause for 1 minutes to build app cache
+  pause:
+    minutes: 1
+
+- name: init password jenkins
+  shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+  changed_when: false
+  register: result
+
+- name: print init password jenkins
+  debug:
+    var: result.stdout
